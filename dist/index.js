@@ -1,12 +1,13 @@
-import { AuthenticationError } from 'apollo-server';
-import { createServer } from 'http';
-import { ApolloServerPluginDrainHttpServer, gql } from 'apollo-server-core';
 import { makeExecutableSchema } from '@graphql-tools/schema';
-import { WebSocketServer } from 'ws';
-import { useServer } from 'graphql-ws/lib/use/ws';
-import express from 'express';
-import { PubSub } from 'graphql-subscriptions';
+import { AuthenticationError } from 'apollo-server';
+import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core';
 import { ApolloServer } from 'apollo-server-express';
+import express from 'express';
+import fs from 'fs';
+import { PubSub } from 'graphql-subscriptions';
+import { useServer } from 'graphql-ws/lib/use/ws';
+import { createServer } from 'http';
+import { WebSocketServer } from 'ws';
 const subscribeTypes = {
     NUMBER_INCREMENTED: 'NUMBER_INCREMENTED',
 };
@@ -19,22 +20,14 @@ const sampleBooks = [
     { title: 'City of Glass', author: 'Paul Auster' },
     { title: 'Human Disqualification', author: 'Osamu Dazai' },
 ];
-const typeDefs = gql `
-  type Book {
-    title: String
-    author: String
-  }
-  type Query {
-    currentNumber: Int
-    books: [Book!]!
-  }
-  type Subscription {
-    numberIncremented: Int
-  }
-`;
-// const schema = loadSchemaSync(join(__dirname, '../schema.graphql'), {
-//   loaders: [new GraphQLFileLoader()],
-// });
+// NOTE: read schema.graphql file(and create types from this file with codegen )
+const typeDefs = fs.readFileSync('./schema.graphql', { encoding: 'utf8' });
+const subscribeResolvers = {
+    numberIncremented: {
+        // NOTE: avoid in issue https://github.com/dotansimha/graphql-code-generator/issues/7197
+        subscribe: () => pubsub.asyncIterator([subscribeTypes.NUMBER_INCREMENTED]),
+    },
+};
 // リゾルバーの定義
 const resolvers = {
     Query: {
@@ -51,6 +44,7 @@ const resolvers = {
     },
     Subscription: {
         numberIncremented: {
+            // NOTE: avoid in issue https://github.com/dotansimha/graphql-code-generator/issues/7197
             subscribe: () => pubsub.asyncIterator([subscribeTypes.NUMBER_INCREMENTED]),
         },
     },
@@ -82,8 +76,7 @@ const wsServer = new WebSocketServer({
 const serverCleanup = useServer({ schema: schema }, wsServer);
 // サーバーの起動
 const server = new ApolloServer({
-    // schema: schemaWithResolvers,
-    schema: schema,
+    schema,
     context: ({ req }) => ({ user: getUser(req.headers.authorization) }),
     debug: true,
     plugins: [
@@ -104,6 +97,7 @@ const server = new ApolloServer({
 await server.start();
 server.applyMiddleware({ app });
 httpServer.listen(PORT, () => {
+    //  NOTE: query でも　subscribe でもエンドポイントは一つ
     console.log(`Query endpoint ready at http://localhost:${PORT}${server.graphqlPath}`);
     console.log(`Subscription endpoint ready at ws://localhost:${PORT}${server.graphqlPath}`);
 });

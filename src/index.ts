@@ -1,14 +1,19 @@
 import { makeExecutableSchema } from '@graphql-tools/schema';
 import { AuthenticationError } from 'apollo-server';
-import { ApolloServerPluginDrainHttpServer, gql } from 'apollo-server-core';
+import { ApolloServerPluginDrainHttpServer } from 'apollo-server-core';
 import { ApolloServer } from 'apollo-server-express';
 import express from 'express';
+import fs from 'fs';
 import { PubSub } from 'graphql-subscriptions';
 import { useServer } from 'graphql-ws/lib/use/ws';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
 import { Context } from './types/contenxt';
-import { Resolvers } from './types/generated/graphql';
+import {
+  QueryResolvers,
+  Resolvers,
+  SubscriptionResolvers,
+} from './types/generated/graphql';
 
 const subscribeTypes = {
   NUMBER_INCREMENTED: 'NUMBER_INCREMENTED',
@@ -25,48 +30,42 @@ const sampleBooks = [
   { title: 'Human Disqualification', author: 'Osamu Dazai' },
 ];
 
-const typeDefs = gql`
-  type Book {
-    title: String
-    author: String
-  }
-  type Query {
-    currentNumber: Int
-    books: [Book!]!
-  }
-  type Subscription {
-    numberIncremented: Int
-  }
-`;
+// NOTE: graphql.codegen によって片付けされたものと同じものを読み込むことができる
+const typeDefs = fs.readFileSync('./schema.graphql', { encoding: 'utf8' });
 
-// リゾルバーの定義
+// QueryResolver(HTTP)の定義
+const queryResolvers: QueryResolvers<Context> = {
+  books: (parent, args, context: Context) => {
+    // TODO: 認可処理を入れる
+    // TODO: データ取得処理をいれる
+    console.log({ parent, args, context });
+    console.log({ name: context.user.name });
+    return sampleBooks;
+  },
+  currentNumber: () => {
+    return currentNumber;
+  },
+};
+
+// SubscribeResolver(WebSocket)の定義
+const subscribeResolvers: SubscriptionResolvers<Context> = {
+  numberIncremented: {
+    // NOTE: graphql-subscriptions asyncIteratorの片付けが間違っているようなので any 型で回避
+    // https://github.com/dotansimha/graphql-code-generator/pull/7015#issuecomment-976211984
+    subscribe: () =>
+      pubsub.asyncIterator([subscribeTypes.NUMBER_INCREMENTED]) as any,
+  },
+};
+
 const resolvers: Resolvers = {
-  Query: {
-    books: (parent, args, context: Context) => {
-      // TODO: 認可処理を入れる
-      // TODO: データ取得処理をいれる
-      console.log({ parent, args, context });
-      console.log({ name: context.user.name });
-      return sampleBooks;
-    },
-    currentNumber: () => {
-      return currentNumber;
-    },
-  },
-  Subscription: {
-    numberIncremented: {
-      subscribe: () =>
-        pubsub.asyncIterator([subscribeTypes.NUMBER_INCREMENTED]),
-    },
-  },
+  Query: queryResolvers,
+  Subscription: subscribeResolvers,
 };
 
 const schema = makeExecutableSchema({
   typeDefs,
   resolvers,
 });
-
-// const schemaWithResolvers = addResolversToSchema({ schema, resolvers });
 
 const getUser = (token?: string): Context['user'] => {
   if (token === undefined) {
@@ -76,7 +75,6 @@ const getUser = (token?: string): Context['user'] => {
   }
 
   // TODO: Tokenからユーザー情報を取り出す処理
-
   return {
     name: 'dummy name',
     email: 'dummy@example.com',
@@ -94,13 +92,12 @@ const wsServer = new WebSocketServer({
   path: '/graphql',
 });
 
-const serverCleanup = useServer({ schema: schema }, wsServer);
+const serverCleanup = useServer({ schema }, wsServer);
 
 // サーバーの起動
 const server = new ApolloServer({
   schema,
   context: ({ req }) => ({ user: getUser(req.headers.authorization) }),
-  debug: true, // エラーレスポンスにスタックトレースを含ませない
   plugins: [
     // HttpServerの起動
     ApolloServerPluginDrainHttpServer({ httpServer }),
@@ -115,6 +112,7 @@ const server = new ApolloServer({
       },
     },
   ],
+  debug: true, // エラーレスポンスにスタックトレースを含ませない
 });
 
 await server.start();
