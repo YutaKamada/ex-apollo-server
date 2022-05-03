@@ -63,7 +63,7 @@ subscription ListenAddCurrentNumber {
   $ yarn codegen
 
 ## 構成図
-
+```
 .
 ├── src
 │ ├── types
@@ -73,3 +73,4 @@ subscription ListenAddCurrentNumber {
 │ └── index.ts // サーバ起動設定、起動コード
 ├── codegen.yml // codegenerator 設定
 └── schema.graphql // graphql で使用する型定義ファイル
+```
