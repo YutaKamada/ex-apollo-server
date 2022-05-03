@@ -55,11 +55,11 @@ subscription ListenAddCurrentNumber {
 
 ## コマンド一覧
 
-- 起動コマンド
-  $ yarn
-  $ yarn start
+- 起動コマンド  
+  $ yarn  
+  $ yarn start  
 
-- schema.graphql から型定義を生成するコマンド
+- schema.graphql から型定義を生成するコマンド  
   $ yarn codegen
 
 ## 構成図
