@@ -45,12 +45,13 @@ subscription ListenAddCurrentNumber {
 
 の Query を発行すると値が取得できます。
 
-参考 URL：
+参考にさせていただいた URL：
 
 - HTTP
   https://zenn.dev/intercept6/articles/3daca0298d32d8022e71
-- Websocket
-  https://www.apollographql.com/docs/apollo-server/data/subscriptions/（公式）
+- Websocket（公式）
+  https://www.apollographql.com/docs/apollo-server/data/subscriptions/
+ 
 
 ## コマンド一覧
 
