@@ -1,13 +1,13 @@
 # ex-apollo-server
 
-ApolloServer で GraphQL のサンプル（サーバーサイド）
-HTTP での同期通信と、WebSocket を使用した非同期通信が行えます。
+ApolloServer で GraphQL のサンプル（サーバーサイド）  
+HTTP での通信と、WebSocket での双方向通信が行えます。
 
-同期通信では、
+HTTP では、
 ① サンプルとして定義してある books データ一覧を取得する
 ② サーバー起動時から `currentNumber` が 一秒ごとに 1 加算される値の現在値を取得する
 
-非同期通信では、
+Websocket では、
 ③ `currentNumber` が加算されるごとにイベントを受け取る
 
 ものがあります。
@@ -16,7 +16,7 @@ HTTP での同期通信と、WebSocket を使用した非同期通信が行え�
 https://studio.apollographql.com/sandbox/explorer
 こちらで下記 query を投げる(アカウントが必要)
 
-【同期通信】
+【HTTP】  
 ① books 一覧を取得する
 
 ```
@@ -35,7 +35,8 @@ query getCurrentNumber{
 }
 ```
 
-・"NUMBER_INCREMENTED" が発火されたイベントを listen する
+【Websocket】  
+③ "NUMBER_INCREMENTED" が発火されたイベントを listen する
 
 ```
 subscription ListenAddCurrentNumber {
